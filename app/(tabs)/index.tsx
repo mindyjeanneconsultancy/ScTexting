@@ -1,98 +1,192 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
+import { useState } from 'react';
+import { Button, Linking, Platform, StyleSheet, Text, View } from 'react-native';
+export default function Index() {
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+  const now = new Date();
+  console.log(now.toString());
+  const numbersFile = "https://raw.githubusercontent.com/mindyjeanneconsultancy/SmsTexting/refs/heads/main/websiteinfo.txt";
+  const original = "This is Mindy's first Native React Application " + now.toLocaleTimeString();
+  const [message, setMessage] = useState(original);
 
-export default function HomeScreen() {
+  const toggleMessage = () => {
+    if (message === original) {
+      setMessage("Button Clicked!");
+    } else {
+      setMessage(original);
+    }
+  };
+
+  const [textContent, setTextContent] = useState('');
+  const [fileName, setfileName] = useState( 'https://luxury-sunshine-667461.netlify.app/websiteinfo.txt') ;
+  const handleReadFile = () => {
+    setMessage ( "Trying to load file");
+    fetch(fileName)
+     .then(res => res.text())
+     .then(data => setTextContent(data))
+     .catch(err => setTextContent('Error: ' + err.message + " " +fileName));
+};
+
+function processTextAndSendSMS(text) {
+  // Clean Windows line endings
+  const cleaned = text.replace(/\r/g, '');
+
+  // Split into lines (optional, if you need them)
+  const lines = cleaned.split('\n');
+
+  // Extract phone numbers
+  const numbers = cleaned.match(/\d{3}-\d{3}-\d{4}/g);
+  if (!numbers || numbers.length === 0) {
+    return { error: "No phone numbers found." };
+  }
+
+  // Format for iOS vs Android
+  const recipientString =
+    Platform.OS === "ios"
+      ? numbers.join(",")
+      : numbers.join(";");
+
+  // Build SMS URL
+  const smsURL = `sms:${recipientString}`;
+
+  return { smsURL, numbers };
+}
+
+const iPhoneReadFile = async () => {
+  try {
+    setMessage("Trying to load file...");
+
+    const response = await fetch(numbersFile);
+
+    if (!response.ok) {
+      setTextContent("Error fetching file: " + response.status);
+      return;
+    }
+
+    const text = await response.text();
+
+    // 🔥 Call your helper function here
+    const result = processiPhoneTextAndSendSMS(text);
+
+    // Handle errors from helper
+    if (result.error) {
+      setTextContent(result.error);
+      return;
+    }
+
+    // Update UI with numbers found
+    setTextContent("Found numbers: " + result.numbers.join(", "));
+
+    // Try to open SMS app
+    const supported = await Linking.canOpenURL(result.smsURL);
+    if (!supported) {
+      setTextContent("SMS not supported on this device.");
+      return;
+    }
+
+    await Linking.openURL(result.smsURL);
+
+    setTextContent("SMS app opened successfully.");
+
+  } catch (err) {
+    setTextContent("Unexpected error: " + err.message);
+  }
+};
+
+
+function processiPhoneTextAndSendSMS(text) {
+  const cleaned = text.replace(/\r/g, '');
+  const numbers = cleaned.match(/\d{3}-\d{3}-\d{4}/g);
+
+  if (!numbers || numbers.length === 0) {
+    return { error: "No phone numbers found." };
+  }
+
+  const recipientString =
+    Platform.OS === "ios"
+      ? numbers.join(",")
+      : numbers.join(";");
+
+  const body = encodeURIComponent("Hello from my app!");
+
+  // ⭐ Correct SMS URL format
+  const smsURL = `sms:${recipientString}?body=${body}`;
+
+  return { smsURL, numbers };
+}
+
+
+
+
+const loadFile = async () => {
+  try {
+    const response = await fetch ('https://luxury-sunshine-667461.netlify.app/websiteinfo.txt');
+
+    if (!response.ok) {
+      throw new Error('Network response was not ok, Lenny Bruce is not afraid');    }
+
+    const text  = await response.text();
+    const result= processTextAndSendSMS(text);
+  
+    Linking.openURL(`sms:${result}`);
+    setTextContent(result);
+  } 
+  catch (error) {
+    setTextContent ( "Error:=> " + error.message )
+    console.log("Fetch error:", error.message);
+  }
+};
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+    <View style={styles.container}>
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+      {/* FIRST BLOCK */}
+      <View style={styles.firstBlock}>
+        <Text style={styles.message}>{message}</Text>
+        <Button title="Toggle Message" onPress={toggleMessage} />
+        <StatusBar style="auto" />
+      </View>
+
+      {/* SECOND BLOCK */}
+      <View style={styles.secondBlock}>
+
+        <Button title="Read Text File - iPhone Version" onPress={iPhoneReadFile} />
+        
+        <Text style={styles.output}>
+          {textContent || 'Press the button to load the file'}
+        </Text>
+      </View>
+
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
+  message: {
+    color: 'navy',
+    fontSize: 24,
+    marginBottom: 20,
+  },
+  container: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
-    gap: 8,
+    padding: 20,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  firstBlock: {
+    marginBottom: 40,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  secondBlock: {
+    marginTop: 20,
+    alignItems: 'center',
+  },
+  header: {
+    fontSize: 24,
+    marginBottom: 10,
+  },
+  output: {
+    marginTop: 20,
+    fontSize: 18,
+    textAlign: 'center',
   },
 });

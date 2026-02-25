@@ -7,7 +7,7 @@
     "icon": "./assets/images/icon.png",
     "scheme": "sctexting",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
+    "newArchEnabled": true, 
     "ios": {
       "supportsTablet": true
     },
@@ -23,6 +23,7 @@
     },
     "web": {
       "output": "static",
+      "basePath": "/ScTexting",
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
